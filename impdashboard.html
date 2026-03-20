@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Car Dashboard</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+body {
+  background: #111;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
+
+h1 {
+  margin: 10px;
+}
+
+button {
+  width: 80px;
+  height: 60px;
+  font-size: 18px;
+  margin: 5px;
+  border-radius: 10px;
+  border: none;
+}
+
+.control {
+  margin-top: 20px;
+}
+
+.data-box {
+  background: #222;
+  padding: 10px;
+  margin: 10px;
+  border-radius: 10px;
+}
+
+input {
+  width: 80%;
+  height: 40px;
+  font-size: 18px;
+  text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🚗 Smart Car</h1>
+
+<!-- CONTROLS -->
+<div class="control">
+  <button onclick="send('FORWARD')">⬆️</button><br>
+  <button onclick="send('LEFT')">⬅️</button>
+  <button onclick="send('STOP')">⏹</button>
+  <button onclick="send('RIGHT')">➡️</button><br>
+  <button onclick="send('BACKWARD')">⬇️</button>
+</div>
+
+<!-- BUZZER -->
+<h2>Buzzer</h2>
+<button onclick="buzzer('b.start')">ON</button>
+<button onclick="buzzer('b.stop')">OFF</button>
+
+<!-- OLED MESSAGE -->
+<h2>OLED Message</h2>
+<input id="msg" maxlength="64" placeholder="Type message (max 64 chars)">
+<br>
+<button onclick="sendMessage()">Send</button>
+
+<!-- DATA -->
+<h2>📊 Data</h2>
+
+<div class="data-box">
+  Distance: <span id="distance">--</span> cm
+</div>
+
+<div class="data-box">
+  IR Status: <span id="ir">--</span>
+</div>
+
+<div class="data-box">
+  Car State: <span id="state">--</span>
+</div>
+
+<script>
+
+// MQTT
+const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+
+client.on("connect", () => {
+  console.log("Connected");
+
+  client.subscribe("car/data/distance");
+  client.subscribe("car/data/ir");
+  client.subscribe("car/data/state");
+});
+
+// RECEIVE DATA
+client.on("message", (topic, message) => {
+  message = message.toString();
+
+  if(topic === "car/data/distance")
+    document.getElementById("distance").innerText = message;
+
+  if(topic === "car/data/ir")
+    document.getElementById("ir").innerText = message;
+
+  if(topic === "car/data/state")
+    document.getElementById("state").innerText = message;
+});
+
+// SEND COMMANDS
+function send(cmd) {
+  client.publish("car/control/direction", cmd);
+}
+
+function buzzer(cmd) {
+  client.publish("car/control/buzzer", cmd);
+}
+
+function sendMessage() {
+  let text = document.getElementById("msg").value;
+
+  if(text.length > 64) {
+    alert("Max 64 characters!");
+    return;
+  }
+
+  client.publish("car/lcd/message", text);
+}
+
+</script>
+
+</body>
+</html>
